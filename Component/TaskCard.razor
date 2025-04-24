@@ -1,0 +1,47 @@
+﻿@using Task_Manager_App.Models
+@using Microsoft.AspNetCore.Components
+
+<div class="card mb-2">
+    <div class="card-body">
+        <h5 class="card-title @(IsOverdue ? "text-danger" : "")">
+            @Task.Title
+            <span class="badge @(Task.Priority switch
+            {
+                PriorityLevel.High => "bg-danger",
+                PriorityLevel.Medium => "bg-warning text-dark",
+                _ => "bg-success"
+            })">
+                @Task.Priority
+            </span>
+        </h5>
+
+        <h6 class="card-subtitle mb-2 text-muted">Due: @Task.DueDate.ToShortDateString()</h6>
+        <p class="card-text">@Task.Description</p>
+
+        <p>
+            Status:
+            <span class="fw-bold @(Task.IsCompleted ? "text-success" : "text-danger")">
+                @(Task.IsCompleted ? "✅ Completed" : "❌ Not Completed")
+            </span>
+        </p>
+
+        <button class="btn btn-sm btn-success me-2" @onclick="MarkAsComplete" disabled="@Task.IsCompleted">✔️ Complete</button>
+        <button class="btn btn-sm btn-danger" @onclick="ConfirmDelete">🗑️ Delete</button>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public TaskItem Task { get; set; }
+
+    [Parameter]
+    public EventCallback<TaskItem> OnComplete { get; set; }
+
+    [Parameter]
+    public EventCallback<TaskItem> OnDelete { get; set; }
+
+    private bool IsOverdue => Task.DueDate < DateTime.Today && !Task.IsCompleted;
+
+    private async Task MarkAsComplete() => await OnComplete.InvokeAsync(Task);
+    private async Task ConfirmDelete() => await OnDelete.InvokeAsync(Task);
+}

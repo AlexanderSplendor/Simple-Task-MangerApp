@@ -1,0 +1,85 @@
+﻿@page "/"
+@using Task_Manager_App.Models
+@using Task_Manager_App.Component
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+
+<div class="container py-4">
+    <h1 class="mb-4">📝 Task Manager</h1>
+
+    <TaskForm OnTaskAdded="AddTask" />
+
+    <ConfirmDelete 
+        Show="@showConfirm" 
+        Task="@taskToDelete" 
+        OnCancel="@(() => showConfirm = false)" 
+        OnConfirmDelete="ConfirmedDeleteTask" />
+
+    @if (FilteredTasks.Any())
+    {
+        <div class="btn-group my-3">
+            <button class="btn btn-outline-primary" @onclick="@(() => filter = "All")">All</button>
+            <button class="btn btn-outline-success" @onclick="@(() => filter = "Completed")">Completed</button>
+            <button class="btn btn-outline-warning" @onclick="@(() => filter = "Incomplete")">Incomplete</button>
+        </div>
+
+        @foreach (var task in FilteredTasks)
+        {
+            <TaskCard 
+                Task="task" 
+                OnComplete="CompleteTask" 
+                OnDelete="PromptDelete" />
+        }
+    }
+    else
+    {
+        <p class="text-muted">No tasks yet. Add your first task above!</p>
+    }
+</div>
+
+@code {
+    private List<TaskItem> tasks = new();
+    private string filter = "All";
+    private bool showConfirm = false;
+    private TaskItem? taskToDelete = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var saved = await localStorage.GetItemAsync<List<TaskItem>>("tasks");
+        if (saved != null) tasks = saved;
+    }
+
+    private async Task SaveTasksAsync() => await localStorage.SetItemAsync("tasks", tasks);
+
+    private async void AddTask(TaskItem newTask)
+    {
+        tasks.Add(newTask);
+        await SaveTasksAsync();
+    }
+
+    private async void CompleteTask(TaskItem task)
+    {
+        task.IsCompleted = true;
+        await SaveTasksAsync();
+    }
+
+    private void PromptDelete(TaskItem task)
+    {
+        taskToDelete = task;
+        showConfirm = true;
+    }
+
+    private async Task ConfirmedDeleteTask(TaskItem task)
+    {
+        tasks.Remove(task);
+        showConfirm = false;
+        await SaveTasksAsync();
+    }
+
+    private IEnumerable<TaskItem> FilteredTasks =>
+        filter switch
+        {
+            "Completed" => tasks.Where(t => t.IsCompleted),
+            "Incomplete" => tasks.Where(t => !t.IsCompleted),
+            _ => tasks
+        };
+}
